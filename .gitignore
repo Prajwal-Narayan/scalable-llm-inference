@@ -208,4 +208,5 @@ __marimo__/
 
 *.tfstate
 *.tfstate.backup
-.terraform/
+
+infra/.terraform/ 
