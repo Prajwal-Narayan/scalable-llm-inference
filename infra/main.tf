@@ -54,7 +54,7 @@ module "eks" {
       desired_size = 1
 
       # L40S Instance Configuration
-      instance_types = ["g6.xlarge"]
+      instance_types = ["g6e.xlarge"]
       
       # Use the correct AMI for GPU support
       ami_type       = "AL2_x86_64_GPU" 

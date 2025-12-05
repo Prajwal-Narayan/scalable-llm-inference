@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: titan-inference
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: titan-inference
+  template:
+    metadata:
+      labels:
+        app: titan-inference
+    spec:
+      containers:
+      - name: vllm-engine
+        image: vllm/vllm-openai:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+        args:
+        - "--model"
+        - "mistralai/Ministral-3-14B-Instruct-2512"
+        - "--dtype"
+        - "bfloat16"
+        
+        # --- CRITICAL FIX ---
+        - "--gpu-memory-utilization"
+        - "0.90"                 
+        # --------------------
+        
+        - "--max-model-len"
+        - "32768"
+        - "--tensor-parallel-size"
+        - "1"
+        env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-secret
+              key: token
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+          requests:
+            nvidia.com/gpu: 1
+        
+        # Keeping our extended timers from the previous fix
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 600
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 600
+          periodSeconds: 10
+
+      nodeSelector:
+        accelerator: nvidia-l40s
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
